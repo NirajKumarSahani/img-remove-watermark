@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Watermark Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .control-panel label {
+            font-weight: 500;
+        }
+        .control-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        .control-panel input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="container mx-auto max-w-5xl w-full">
+        <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Image Watermark Tool</h1>
+                <p class="text-gray-500 mt-2">Add a custom text watermark to your images with ease.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Controls Column -->
+                <div class="lg:col-span-1 control-panel space-y-6">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">1. Upload Image</h2>
+                        <input type="file" id="imageLoader" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    </div>
+
+                    <div id="controls" class="space-y-6 hidden">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">2. Customize Watermark</h2>
+                        <div>
+                            <label for="watermarkText" class="block text-sm font-medium text-gray-700 mb-1">Watermark Text</label>
+                            <input type="text" id="watermarkText" value="© Your Brand" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label for="fontSize" class="block text-sm font-medium text-gray-700 mb-1">Font Size: <span id="fontSizeValue">48</span>px</label>
+                            <input type="range" id="fontSize" min="10" max="200" value="48" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <div>
+                            <label for="opacity" class="block text-sm font-medium text-gray-700 mb-1">Opacity: <span id="opacityValue">0.5</span></label>
+                            <input type="range" id="opacity" min="0" max="1" step="0.05" value="0.5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <label for="fontColor" class="block text-sm font-medium text-gray-700">Color</label>
+                            <input type="color" id="fontColor" value="#ffffff" class="w-12 h-10 p-1 border border-gray-300 rounded-lg cursor-pointer">
+                        </div>
+
+                        <div>
+                            <label for="position" class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                            <select id="position" class="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="center">Center</option>
+                                <option value="bottom-right" selected>Bottom Right</option>
+                                <option value="bottom-left">Bottom Left</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="top-left">Top Left</option>
+                                <option value="repeat">Repeat (Tile)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="pt-4">
+                            <h2 class="text-xl font-semibold text-gray-700 mb-4">3. Download</h2>
+                            <button id="downloadBtn" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105 shadow-lg">
+                                Download Image
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canvas Column -->
+                <div class="lg:col-span-2 flex items-center justify-center bg-gray-200 rounded-lg p-4 min-h-[300px] lg:min-h-[500px]" id="canvasContainer">
+                    <div id="placeholder" class="text-center text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="mt-2">Your image preview will appear here.</p>
+                        <p class="text-sm">Start by uploading an image.</p>
+                    </div>
+                    <div id="loader" class="loader hidden"></div>
+                    <canvas id="canvas" class="rounded-lg shadow-md max-w-full max-h-full hidden"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageLoader = document.getElementById('imageLoader');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const watermarkText = document.getElementById('watermarkText');
+        const fontSize = document.getElementById('fontSize');
+        const fontColor = document.getElementById('fontColor');
+        const opacity = document.getElementById('opacity');
+        const position = document.getElementById('position');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const controls = document.getElementById('controls');
+        const placeholder = document.getElementById('placeholder');
+        const loader = document.getElementById('loader');
+        
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        const opacityValue = document.getElementById('opacityValue');
+        
+        let originalImage = null;
+
+        // --- EVENT LISTENERS ---
+        imageLoader.addEventListener('change', handleImageUpload);
+        watermarkText.addEventListener('input', () => redrawCanvas());
+        fontSize.addEventListener('input', () => {
+            fontSizeValue.textContent = fontSize.value;
+            redrawCanvas();
+        });
+        fontColor.addEventListener('input', () => redrawCanvas());
+        opacity.addEventListener('input', () => {
+            opacityValue.textContent = opacity.value;
+            redrawCanvas();
+        });
+        position.addEventListener('change', () => redrawCanvas());
+        downloadBtn.addEventListener('click', downloadImage);
+        
+        // --- FUNCTIONS ---
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Show loader, hide placeholder
+            placeholder.classList.add('hidden');
+            loader.classList.remove('hidden');
+            canvas.classList.add('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                originalImage = new Image();
+                originalImage.onload = function() {
+                    // Once image is loaded, set up canvas and draw
+                    setupCanvas(originalImage);
+                    redrawCanvas();
+                    controls.classList.remove('hidden');
+                    loader.classList.add('hidden');
+                    canvas.classList.remove('hidden');
+                }
+                originalImage.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function setupCanvas(img) {
+            // Set canvas dimensions to match the image
+            canvas.width = img.width;
+            canvas.height = img.height;
+            // Ensure canvas fits within its container while maintaining aspect ratio
+            const container = document.getElementById('canvasContainer');
+            const containerRatio = container.clientWidth / container.clientHeight;
+            const imgRatio = img.width / img.height;
+
+            if (imgRatio > containerRatio) {
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
+            } else {
+                canvas.style.width = 'auto';
+                canvas.style.height = '100%';
+            }
+        }
+        
+        function redrawCanvas() {
+            if (!originalImage) return;
+            
+            // 1. Clear canvas and draw original image
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImage, 0, 0);
+            
+            // 2. Prepare text properties
+            const text = watermarkText.value;
+            const size = fontSize.value;
+            const color = fontColor.value;
+            const alpha = opacity.value;
+            const pos = position.value;
+            
+            ctx.font = `bold ${size}px Inter`;
+            ctx.fillStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 3. Draw watermark
+            if (pos === 'repeat') {
+                drawTiledWatermark(text);
+            } else {
+                drawSingleWatermark(text, pos);
+            }
+
+            // Reset alpha
+            ctx.globalAlpha = 1.0;
+        }
+
+        function drawSingleWatermark(text, pos) {
+            const padding = 20;
+            const textMetrics = ctx.measureText(text);
+            let x, y;
+
+            switch(pos) {
+                case 'top-left':
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'top';
+                    x = padding;
+                    y = padding;
+                    break;
+                case 'top-right':
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'top';
+                    x = canvas.width - padding;
+                    y = padding;
+                    break;
+
+                case 'bottom-left':
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'bottom';
+                    x = padding;
+                    y = canvas.height - padding;
+                    break;
+                
+                case 'bottom-right':
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'bottom';
+                    x = canvas.width - padding;
+                    y = canvas.height - padding;
+                    break;
+                
+                case 'center':
+                default:
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    x = canvas.width / 2;
+                    y = canvas.height / 2;
+                    break;
+            }
+            ctx.fillText(text, x, y);
+        }
+
+        function drawTiledWatermark(text) {
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width * 1.5; // Add spacing
+            const textHeight = parseInt(fontSize.value, 10) * 2; // Add spacing
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Rotate the context for a diagonal pattern
+            const angle = -25 * Math.PI / 180;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            // Create a pattern across the canvas
+            for (let y = -textHeight; y < canvas.height + textHeight; y += textHeight) {
+                for (let x = -textWidth; x < canvas.width + textWidth; x += textWidth) {
+                    // Save the current state
+                    ctx.save();
+                    // Translate and rotate around the text's own center
+                    ctx.translate(x, y);
+                    ctx.rotate(angle);
+                    // Draw the text
+                    ctx.fillText(text, 0, 0);
+                    // Restore the original state
+                    ctx.restore();
+                }
+            }
+        }
+
+        function downloadImage() {
+            if (!originalImage) {
+                // You could use a custom modal here instead of an alert
+                console.warn("No image to download.");
+                return;
+            };
+            const link = document.createElement('a');
+            link.download = 'watermarked-image.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+    </script>
+</body>
+</html>
